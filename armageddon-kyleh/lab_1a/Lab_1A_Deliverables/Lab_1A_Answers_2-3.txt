@@ -1,0 +1,292 @@
+Lab_1A_Answers_2-3
+
+
+
+2) Short answers:
+ 
+A) Why is DB inbound source restricted to the EC2 security group? 
+Because you only want a particular application to talk to the database, not give access to other applications. It makes it scalable and works with automation, enforces least privilege,  adds depth in defense and prevents over-exposure.
+
+B) What port does MySQL use? 
+Port 3306
+
+C) Why is Secrets Manager better than storing creds in code/user-data?
+Code and user scripts are not secret – anyone that has access can read your source code without any security challenges
+Secrets Manager uses IAM for access control, supports rotation without redeployment, secrets will not appear in Terraform, enables least privilege, 
+
+
+
+
+
+
+
+
+
+
+3) Evidence for Audits / Labs (Recommended Output)
+
+
+aws ec2 describe-security-groups --group-ids sg-0123456789abcdef0 > sg.json 
+
+ aws ec2 describe-security-groups \
+  --group-ids sg-0785f04cb467e9d7c \
+  --region us-east-2 \
+  --output json
+{
+    "SecurityGroups": [
+        {
+            "GroupId": "sg-0785f04cb467e9d7c",
+            "IpPermissionsEgress": [
+                {
+                    "IpProtocol": "-1",
+                    "UserIdGroupPairs": [],
+                    "IpRanges": [
+                        {
+                            "CidrIp": "0.0.0.0/0"
+                        }
+                    ],
+                    "Ipv6Ranges": [],
+                    "PrefixListIds": []
+                }
+            ],
+            "VpcId": "vpc-058ba5cb0572e2199",
+            "SecurityGroupArn": "arn:aws:ec2:us-east-2:912083617270:security-group/sg-0785f04cb467e9d7c",
+            "OwnerId": "912083617270",
+            "GroupName": "lab1a-ec2-sg",
+            "Description": "lab_1a_ec2_sg",
+            "IpPermissions": [
+                {
+                    "IpProtocol": "tcp",
+                    "FromPort": 80,
+                    "ToPort": 80,
+                    "UserIdGroupPairs": [],
+                    "IpRanges": [
+                        {
+                            "CidrIp": "0.0.0.0/0"
+                        }
+                    ],
+                    "Ipv6Ranges": [],
+                    "PrefixListIds": []
+                },
+                {
+                    "IpProtocol": "tcp",
+                    "FromPort": 22,
+                    "ToPort": 22,
+                    "UserIdGroupPairs": [],
+                    "IpRanges": [
+                        {
+                            "CidrIp": "0.0.0.0/0"
+                        }
+                    ],
+                    "Ipv6Ranges": [],
+                    "PrefixListIds": []
+                }
+            ]
+        }
+    ]
+}
+
+
+
+
+
+
+
+
+
+
+aws rds describe-db-instances --db-instance-identifier mydb01 > rds.json 
+
+$ aws rds describe-db-instances \
+  --db-instance-identifier lab1amysqldb \
+  --region us-east-2 \
+  --output json
+{
+    "DBInstances": [
+        {
+            "DBInstanceIdentifier": "lab1amysqldb",
+            "DBInstanceClass": "db.t4g.micro",
+            "Engine": "mysql",
+            "DBInstanceStatus": "available",
+            "MasterUsername": "admin",
+            "DBName": "armalab1adb",
+            "Endpoint": {
+                "Address": "lab1amysqldb.cjgsyk8yip7w.us-east-2.rds.amazonaws.com",
+                "Port": 3306,
+                "HostedZoneId": "Z2XHWR1WZ565X2"
+            },
+            "AllocatedStorage": 20,
+            "InstanceCreateTime": "2026-01-28T04:16:34.681000+00:00",
+            "PreferredBackupWindow": "08:23-08:53",
+            "BackupRetentionPeriod": 1,
+            "DBSecurityGroups": [],
+            "VpcSecurityGroups": [
+                {
+                    "VpcSecurityGroupId": "sg-02656739357514356",
+                    "Status": "active"
+                }
+            ],
+            "DBParameterGroups": [
+                {
+                    "DBParameterGroupName": "default.mysql8.4",
+                    "ParameterApplyStatus": "in-sync"
+                }
+            ],
+            "AvailabilityZone": "us-east-2c",
+            "DBSubnetGroup": {
+                "DBSubnetGroupName": "lab1a-private-dbsubnets",
+                "DBSubnetGroupDescription": "lab1a-private-dbsubnets",
+                "VpcId": "vpc-058ba5cb0572e2199",
+                "SubnetGroupStatus": "Complete",
+                "Subnets": [
+                    {
+                        "SubnetIdentifier": "subnet-031a44e52049dbedf",
+                        "SubnetAvailabilityZone": {
+                            "Name": "us-east-2c"
+                        },
+                        "SubnetOutpost": {},
+                        "SubnetStatus": "Active"
+                    },
+                    {
+                        "SubnetIdentifier": "subnet-02325f72c090fa7e4",
+                        "SubnetAvailabilityZone": {
+                            "Name": "us-east-2b"
+                        },
+                        "SubnetOutpost": {},
+                        "SubnetStatus": "Active"
+                    }
+                ]
+            },
+            "PreferredMaintenanceWindow": "sat:07:41-sat:08:11",
+            "PendingModifiedValues": {},
+            "LatestRestorableTime": "2026-01-31T04:40:00+00:00",
+            "MultiAZ": false,
+            "EngineVersion": "8.4.7",
+            "AutoMinorVersionUpgrade": true,
+            "ReadReplicaDBInstanceIdentifiers": [],
+            "LicenseModel": "general-public-license",
+            "OptionGroupMemberships": [
+                {
+                    "OptionGroupName": "default:mysql-8-4",
+                    "Status": "in-sync"
+                }
+            ],
+            "PubliclyAccessible": false,
+            "StorageType": "gp2",
+            "DbInstancePort": 0,
+            "StorageEncrypted": true,
+            "KmsKeyId": "arn:aws:kms:us-east-2:912083617270:key/52a8604c-185f-408d-af3b-ec5c84ed0427",
+            "DbiResourceId": "db-6QR4ZAA6NEWZYOSFBBSIZD3FDA",
+            "CACertificateIdentifier": "rds-ca-rsa2048-g1",
+            "DomainMemberships": [],
+            "CopyTagsToSnapshot": true,
+            "MonitoringInterval": 0,
+            "DBInstanceArn": "arn:aws:rds:us-east-2:912083617270:db:lab1amysqldb",
+            "IAMDatabaseAuthenticationEnabled": false,
+            "DatabaseInsightsMode": "standard",
+            "PerformanceInsightsEnabled": false,
+            "DeletionProtection": false,
+            "AssociatedRoles": [],
+            "MaxAllocatedStorage": 1000,
+            "TagList": [],
+            "CustomerOwnedIpEnabled": false,
+            "ActivityStreamStatus": "stopped",
+            "BackupTarget": "region",
+            "NetworkType": "IPV4",
+            "StorageThroughput": 0,
+            "CertificateDetails": {
+                "CAIdentifier": "rds-ca-rsa2048-g1",
+                "ValidTill": "2027-01-28T04:15:10+00:00"
+            },
+            "DedicatedLogVolume": false,
+            "IsStorageConfigUpgradeAvailable": false,
+            "EngineLifecycleSupport": "open-source-rds-extended-support-disabled"
+        }
+    ]
+}
+
+
+
+
+
+
+
+
+aws secretsmanager describe-secret --secret-id my-db-secret > secret.json 
+	
+
+$ aws secretsmanager describe-secret \
+  --secret-id lab1a/rds/mysql \
+  --region us-east-2 \
+  --output json
+{
+    "ARN": "arn:aws:secretsmanager:us-east-2:912083617270:secret:lab1a/rds/mysql-g8oMzg",
+    "Name": "lab1a/rds/mysql",
+    "Description": "armageddon lab secret manager",
+    "LastChangedDate": "2026-01-27T22:06:09.852000-07:00",
+    "LastAccessedDate": "2026-01-30T17:00:00-07:00",
+    "Tags": [],
+    "VersionIdsToStages": {
+        "484b4071-8767-4259-89c4-76f5f1601f62": [
+            "AWSCURRENT"
+        ],
+        "86e41418-eea9-4361-a64a-6963a8806c4f": [
+            "AWSPREVIOUS"
+        ]
+    },
+    "CreatedDate": "2026-01-26T20:00:10.536000-07:00"
+}
+
+
+
+
+
+
+
+
+aws ec2 describe-instances --instance-ids i-0123456789abcdef0 > instance.json 
+
+
+$ aws ec2 describe-instances \
+  --instance-ids i-02e2b700b5e1a6b5d \
+  --region us-east-2 \
+  --query "Reservations[].Instances[].IamInstanceProfile.Arn" \
+  --output json
+[
+    "arn:aws:iam::912083617270:instance-profile/lab1a-ec2-secrets-role"
+]
+
+
+
+
+aws iam list-attached-role-policies --role-name MyEC2Role > role-policies.json
+
+$ aws iam list-attached-role-policies \
+  --role-name lab1a-ec2-secrets-role \
+  --output json
+{
+    "AttachedPolicies": [
+        {
+            "PolicyName": "secrets_policy",
+            "PolicyArn": "arn:aws:iam::912083617270:policy/secrets_policy"
+        }
+    ]
+}
+
+
+
+
+
+
+
+Then Answer: 
+Why each rule exists?
+What would break if removed? 
+Why broader access is forbidden?
+Broader access forbidden because the idea is to restrict access to only instances that have the role attached to it  
+Why this role exists 
+Why it can read this secret? 
+This IAM role has the inline policy that provides permissions to read the DB secret info for one specific DB secret in the manager.  
+Why it cannot read others? 
+The inline policy that provides permissions to read the DB secret info for one specific DB secret in the manager restricts it to only reading that particular one. 
+

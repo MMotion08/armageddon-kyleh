@@ -1,0 +1,83 @@
+Lab_1C_Bonus_C
+
+
+
+
+Student verification (CLI)
+
+1)Confirm hosted zone exists (if managed) 
+
+aws route53 list-hosted-zones-by-name
+--dns-name hughes-foundation.org
+--query "HostedZones[].Id"
+
+
+$ aws route53 list-hosted-zones-by-name
+--dns-name hughes-foundation.org
+--query "HostedZones[].Id"
+{
+    "HostedZones": [
+        {
+            "Id": "/hostedzone/Z1001141V0IOBSZ6TK5U",
+            "Name": "hughes-foundation.org.",
+            "CallerReference": "terraform-20260209105648135300000001",
+            "Config": {
+                "Comment": "Managed by Terraform",
+                "PrivateZone": false
+            },
+            "ResourceRecordSetCount": 3
+        }
+    ],
+    "IsTruncated": false,
+    "MaxItems": "100"
+}
+
+bash: --dns-name: command not found
+bash: --query: command not found
+
+
+DNS is not managed by AWS: purchased DNS on 3rd party site
+
+
+
+
+
+2)Confirm app record exists 
+
+$ aws route53 list-resource-record-sets \
+    --hosted-zone-id Z1001141V0IOBSZ6TK5U \
+    --query "ResourceRecordSets[?Name=='app.hughes-foundation.org.']"
+[
+    {
+        "Name": "app.hughes-foundation.org.",
+        "Type": "A",
+        "AliasTarget": {
+            "HostedZoneId": "Z3AADJGX6KTTL2",
+            "DNSName": "balosar-alb05-2087362970.us-east-2.elb.amazonaws.com.",
+            "EvaluateTargetHealth": true
+        }
+    }
+]
+
+
+
+
+
+
+3) Confirm certificate issued 
+
+$ aws acm describe-certificate \
+    --certificate-arn arn:aws:acm:us-east-2:912083617270:certificate/ae5d970d-f5a4-4196-986c-671433485307 \
+    --query "Certificate.Status"
+"ISSUED"
+
+Expected: ISSUED
+
+
+
+4)Confirm HTTPS works 
+
+
+curl -I https://app.hughes-foundation.org \
+Expected: HTTP/1.1 200 (or 301 then 200 depending on your app)
+

@@ -1,0 +1,235 @@
+Verification commands (CLI) for Bonus-B
+
+
+
+
+1)ALB exists and is active
+
+aws elbv2 describe-load-balancers
+--names balosar-alb01
+--query "LoadBalancers[0].State.Code"
+
+
+Kyle@DESKTOP-0A5TR44 MINGW64 /c/documents/theowaf/arma/armageddon-kyleh/lab_1cc (master)
+$ aws elbv2 describe-load-balancers \
+  --names balosar-alb05 \
+  --query "LoadBalancers[0].State.Code"
+"active"
+
+
+
+
+2) HTTPS listener exists on 443
+
+$ aws elbv2 describe-listeners \
+  --listener-arns arn:aws:elasticloadbalancing:us-east-2:912083617270:listener/app/balosar-alb05/9e513ef00a7f0c9f/8422c316fe64492c \
+  --query "Listeners[].Port"
+[
+    443
+]
+
+
+
+
+3) Target is healthy
+
+$ aws elbv2 describe-target-health \
+  --target-group-arn arn:aws:elasticloadbalancing:us-east-2:912083617270:targetgroup/balosar-tg05/02b450bc3c8d80b8
+{
+    "TargetHealthDescriptions": [
+        {
+            "Target": {
+                "Id": "i-03f739bed3c009ef6",
+                "Port": 80
+            },
+            "HealthCheckPort": "80",
+            "TargetHealth": {
+                "State": "unhealthy",
+                "Reason": "Target.FailedHealthChecks",
+                "Description": "Health checks failed"
+            },
+            "AdministrativeOverride": {
+                "State": "no_override",
+                "Reason": "AdministrativeOverride.NoOverride",
+                "Description": "No override is currently active on target"
+            }
+        }
+    ]
+}
+
+
+
+
+4) WAF attached
+
+aws wafv2 get-web-acl-for-resource \
+--resource-arn arn:aws:elasticloadbalancing:us-east-2:912083617270:loadbalancer/app/balosar-alb05/9e513ef00a7f0c9f
+
+This command returned no value. These are the steps/commands I did to get WAF attach values after consulting ChatGPT
+
+
+Step 1: List all WAFs in this region
+
+$ aws wafv2 list-web-acls --scope REGIONAL
+{
+    "NextMarker": "balosar-waf05",
+    "WebACLs": [
+        {
+            "Name": "balosar-waf05",
+            "Id": "4ff3140e-b0aa-4347-a4f4-877723aae3fe",
+            "Description": "",
+            "LockToken": "ee324256-9f6d-4c93-bd00-ff1d1d9b537d",
+            "ARN": "arn:aws:wafv2:us-east-2:912083617270:regional/webacl/balosar-waf05/4ff3140e-b0aa-4347-a4f4-877723aae3fe"
+        }
+    ]
+}
+
+Step 2: Attach it (if you expect one)
+
+aws wafv2 associate-web-acl \
+  --web-acl-arn arn:aws:wafv2:us-east-2:912083617270:regional/webacl/balosar-waf05/4ff3140e-b0aa-4347-a4f4-877723aae3fe \
+  --resource-arn arn:aws:elasticloadbalancing:us-east-2:912083617270:loadbalancer/app/balosar-alb05/9e513ef00a7f0c9f
+
+
+Step 3: Then re-run get-web-acl-for-resource
+
+
+$ aws wafv2 get-web-acl-for-resource \
+--resource-arn arn:aws:elasticloadbalancing:us-east-2:912083617270:loadbalancer/app/balosar-alb05/9e513ef00a7f0c9f
+{
+    "WebACL": {
+        "Name": "balosar-waf05",
+        "Id": "4ff3140e-b0aa-4347-a4f4-877723aae3fe",
+        "ARN": "arn:aws:wafv2:us-east-2:912083617270:regional/webacl/balosar-waf05/4ff3140e-b0aa-4347-a4f4-877723aae3fe",
+        "DefaultAction": {
+            "Allow": {}
+        },
+        "Description": "",
+        "Rules": [
+            {
+                "Name": "AWSManagedRulesCommonRuleSet",
+                "Priority": 1,
+                "Statement": {
+                    "ManagedRuleGroupStatement": {
+                        "VendorName": "AWS",
+                        "Name": "AWSManagedRulesCommonRuleSet"
+                    }
+                },
+                "OverrideAction": {
+                    "None": {}
+                },
+                "VisibilityConfig": {
+                    "SampledRequestsEnabled": true,
+                    "CloudWatchMetricsEnabled": true,
+                    "MetricName": "balosar-waf-common"
+                }
+            }
+        ],
+        "VisibilityConfig": {
+            "SampledRequestsEnabled": true,
+            "CloudWatchMetricsEnabled": true,
+            "MetricName": "balosar-waf-common"
+        },
+        "Capacity": 700,
+        "ManagedByFirewallManager": false,
+        "LabelNamespace": "awswaf:912083617270:webacl:balosar-waf05:",
+        "RetrofittedByFirewallManager": false,
+        "OnSourceDDoSProtectionConfig": {
+            "ALBLowReputationMode": "ACTIVE_UNDER_DDOS"
+        }
+    }
+}
+
+
+
+
+
+
+5) Alarm created (ALB 5xx)
+
+aws cloudwatch describe-alarms \
+  --alarm-name-prefix balosar
+
+
+$ aws cloudwatch describe-alarms \
+  --alarm-name-prefix balosar
+{
+    "MetricAlarms": [
+        {
+            "AlarmName": "balosar-alb-5xx-alarm05",
+            "AlarmArn": "arn:aws:cloudwatch:us-east-2:912083617270:alarm:balosar-alb-5xx-alarm05",
+            "AlarmConfigurationUpdatedTimestamp": "2026-02-09T08:02:26.468000+00:00",
+            "ActionsEnabled": true,
+            "OKActions": [],
+            "AlarmActions": [
+                "arn:aws:sns:us-east-2:912083617270:balosar-db-incidents"
+            ],
+            "InsufficientDataActions": [],
+            "StateValue": "OK",
+            "StateReason": "Threshold Crossed: 1 datapoint [1.0 (09/02/26 10:00:00)] was not greater than or equal to the threshold (10.0).",
+            "StateReasonData": "{\"version\":\"1.0\",\"queryDate\":\"2026-02-09T10:07:53.684+0000\",\"startDate\":\"2026-02-09T10:00:00.000+0000\",\"statistic\":\"Sum\",\"period\":300,\"recentDatapoints\":[1.0],\"threshold\":10.0,\"evaluatedDatapoints\":[{\"timestamp\":\"2026-02-09T10:00:00.000+0000\",\"sampleCount\":1.0,\"value\":1.0}]}",
+            "StateUpdatedTimestamp": "2026-02-09T10:07:53.685000+00:00",
+            "MetricName": "HTTPCode_ELB_5XX_Count",
+            "Namespace": "AWS/ApplicationELB",
+            "Statistic": "Sum",
+            "Dimensions": [
+                {
+                    "Name": "LoadBalancer",
+                    "Value": "app/balosar-alb05/9e513ef00a7f0c9f"
+                }
+            ],
+            "Period": 300,
+            "EvaluationPeriods": 1,
+            "Threshold": 10.0,
+            "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+            "TreatMissingData": "missing",
+            "StateTransitionedTimestamp": "2026-02-09T10:07:53.685000+00:00"
+        },
+        {
+            "AlarmName": "balosar-db-connection-failure",
+            "AlarmArn": "arn:aws:cloudwatch:us-east-2:912083617270:alarm:balosar-db-connection-failure",
+            "AlarmConfigurationUpdatedTimestamp": "2026-02-09T03:30:11.670000+00:00",
+            "ActionsEnabled": true,
+            "OKActions": [],
+            "AlarmActions": [
+                "arn:aws:sns:us-east-2:912083617270:balosar-db-incidents"
+            ],
+            "InsufficientDataActions": [],
+            "StateValue": "INSUFFICIENT_DATA",
+            "StateReason": "Unchecked: Initial alarm creation",
+            "StateUpdatedTimestamp": "2026-02-09T03:30:11.670000+00:00",
+            "MetricName": "DBConnectionErrors",
+            "Namespace": "Lab/RDSApp",
+            "Statistic": "Sum",
+            "Dimensions": [],
+            "Period": 300,
+            "EvaluationPeriods": 1,
+            "Threshold": 3.0,
+            "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+            "TreatMissingData": "missing",
+            "StateTransitionedTimestamp": "2026-02-09T03:30:11.670000+00:00"
+        }
+    ],
+    "CompositeAlarms": []
+}
+
+
+
+
+
+
+
+6) Dashboard exists
+
+$ aws cloudwatch list-dashboards \
+--dashboard-name-prefix balosar
+{
+    "DashboardEntries": [
+        {
+            "DashboardName": "balosar-alb-dashboard",
+            "DashboardArn": "arn:aws:cloudwatch::912083617270:dashboard/balosar-alb-dashboard",
+            "LastModified": "2026-02-09T08:02:27+00:00",
+            "Size": 630
+        }
+    ]
+}

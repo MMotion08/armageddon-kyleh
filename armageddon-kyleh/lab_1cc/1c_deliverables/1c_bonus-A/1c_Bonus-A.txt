@@ -1,0 +1,107 @@
+Student verification (CLI) for Bonus-A
+1) Prove EC2 is private (no public IP)
+ $ aws ec2 describe-instances \
+  --instance-ids i-03f739bed3c009ef6 \
+  --query "Reservations[].Instances[].PublicIpAddress"
+[]
+
+
+Expected: 
+  null
+
+2) Prove VPC endpoints exist
+ $ aws ec2 describe-vpc-endpoints \
+  --filters "Name=vpc-id,Values=vpc-08aad8abde85c50d5" \
+  --query "VpcEndpoints[].ServiceName"
+[
+    "com.amazonaws.us-east-2.s3",
+    "com.amazonaws.us-east-2.logs",
+    "com.amazonaws.us-east-2.ssmmessages",
+    "com.amazonaws.us-east-2.ec2messages",
+    "com.amazonaws.us-east-2.secretsmanager",
+    "com.amazonaws.us-east-2.ssm"
+]
+
+Expected: list includes:
+  ssm 
+  ec2messages 
+  ssmmessages 
+  logs 
+  secretsmanager
+  s3
+
+3) Prove Session Manager path works (no SSH)
+ $ aws ssm describe-instance-information \
+  --query "InstanceInformationList[].InstanceId"
+[
+    "i-03f739bed3c009ef6"
+]
+
+
+Expected: your private EC2 instance ID appears
+
+4) Prove the instance can read both config stores
+Run from SSM session:
+  $ aws ssm get-parameter --name /lab/db/endpoint
+  aws secretsmanager get-secret-value --secret-id lab1c/rds/mysql05
+{
+    "Parameter": {
+        "Name": "/lab/db/endpoint",
+        "Type": "String",
+        "Value": "balosar-rds05.cjgsyk8yip7w.us-east-2.rds.amazonaws.com",
+        "Version": 1,
+        "LastModifiedDate": "2026-02-09T03:35:22.925000+00:00",
+        "ARN": "arn:aws:ssm:us-east-2:912083617270:parameter/lab/db/endpoint",
+        "DataType": "text"
+    }
+}
+{
+    "ARN": "arn:aws:secretsmanager:us-east-2:912083617270:secret:lab1c/rds/mysql05-MWzxbL",
+    "Name": "lab1c/rds/mysql05",
+    "VersionId": "terraform-2026020903352261110000000d",
+    "SecretString": "{\"dbname\":\"labdb\",\"host\":\"balosar-rds05.cjgsyk8yip7w.us-east-2.rds.amazonaws.com\",\"password\":\"Spac3_King!\",\"port\":3306,\"username\":\"admin\"}",
+    "VersionStages": [
+        "AWSCURRENT"
+    ],
+    "CreatedDate": "2026-02-09T03:35:22.880000+00:00"
+}
+
+
+5) Prove CloudWatch logs delivery path is available via endpoint
+  aws logs describe-log-streams \
+    --log-group-name /aws/ec2/balosar-rds-app
+
+
+Kyle@DESKTOP-0A5TR44 MINGW64 /c/documents/theowaf/arma/armageddon-kyleh/lab_1cc (master)
+$ aws logs describe-log-streams \
+  --log-group-name "/aws/ec2/balosar-rds-app"
+
+An error occurred (InvalidParameterException) when calling the DescribeLogStreams operation: 1 validation error detected: Value 'C:/Program Files/Git/aws/ec2/balosar-rds-app' at 'logGroupName' failed to satisfy constraint: Member must satisfy regular expression pattern: [\.\-_/#A-Za-z0-9]+
+
+Kyle@DESKTOP-0A5TR44 MINGW64 /c/documents/theowaf/arma/armageddon-kyleh/lab_1cc (master)
+$ MSYS_NO_PATHCONV=1 aws logs describe-log-streams \
+  --log-group-name /aws/ec2/balosar-rds-app
+{
+    "logStreams": []
+}
+
+
+Kyle@DESKTOP-0A5TR44 MINGW64 /c/documents/theowaf/arma/armageddon-kyleh/lab_1cc (master)
+$ MSYS_NO_PATHCONV=1 aws logs describe-log-groups \
+  --log-group-name-prefix /aws/ec2
+{
+    "logGroups": [
+        {
+            "logGroupName": "/aws/ec2/balosar-rds-app",
+            "creationTime": 1770607823056,
+            "retentionInDays": 7,
+            "metricFilterCount": 0,
+            "arn": "arn:aws:logs:us-east-2:912083617270:log-group:/aws/ec2/balosar-rds-app:*",
+            "storedBytes": 0,
+            "logGroupClass": "STANDARD",
+            "logGroupArn": "arn:aws:logs:us-east-2:912083617270:log-group:/aws/ec2/balosar-rds-app"
+        }
+    ]
+}
+
+***Error kept occurring when entering 1c Bonus-A prompted code, so I entered code to "Disable path conversion for this command" and showed that CloudWatch logs delivery path is available via endpoint***
